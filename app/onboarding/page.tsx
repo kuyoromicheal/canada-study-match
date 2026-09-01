@@ -53,6 +53,7 @@ import {
   type PgwpPreference,
 } from "@/lib/constants/form-options";
 import { CANADIAN_PROVINCES } from "@/types/database";
+import { notifyAppDataChanged } from "@/lib/realtime/events";
 
 const profileSchema = z.object({
   full_name: z.string().min(1, "Required"),
@@ -322,6 +323,7 @@ export default function OnboardingPage() {
         setFormError(err.error || "Failed to save profile");
         return;
       }
+      notifyAppDataChanged();
       router.push("/dashboard");
     } catch {
       setFormError("Failed to save profile");

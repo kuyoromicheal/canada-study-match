@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Alert } from "@/components/ui/alert";
 import { DOCUMENT_TYPE_LABELS } from "@/lib/documents/constants";
+import { notifyAppDataChanged } from "@/lib/realtime/events";
 import type { DocumentType, StudentDocument } from "@/types/database";
 import { Eye, FileText, Pencil, Trash2, Upload } from "lucide-react";
 
@@ -32,6 +33,7 @@ export function DocumentVaultClient({
     if (res.ok) {
       const data = await res.json();
       setDocuments(data.documents);
+      notifyAppDataChanged();
     }
   }, []);
 

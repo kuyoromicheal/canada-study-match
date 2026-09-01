@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { PreparationDisclaimer } from "@/components/applications/preparation-disclaimer";
+import { ApplicationExportPanel } from "@/components/applications/application-export-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +22,7 @@ import {
   type StudentProfile,
 } from "@/types/database";
 import { formatDate } from "@/lib/utils";
+import { APP_DATA_CHANGED } from "@/lib/realtime/events";
 import { Download, LayoutGrid, List } from "lucide-react";
 
 const STATUSES: ApplicationStatus[] = [
@@ -40,8 +42,8 @@ type ApplicationRow = ApplicationTracker & {
 
 export function ApplicationsClient({
   initialApplications,
-  profile,
-  documents,
+  profile: initialProfile,
+  documents: initialDocuments,
 }: {
   initialApplications: ApplicationRow[];
   profile: StudentProfile | null;
@@ -49,14 +51,29 @@ export function ApplicationsClient({
 }) {
   const [view, setView] = useState<"kanban" | "list">("list");
   const [applications, setApplications] = useState(initialApplications);
+  const [profile, setProfile] = useState(initialProfile);
+  const [documents, setDocuments] = useState(initialDocuments);
   const [loading, setLoading] = useState(false);
+  const [markingSubmittedId, setMarkingSubmittedId] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     setLoading(true);
-    const res = await fetch("/api/applications");
-    if (res.ok) {
-      const data = await res.json();
+    const [appsRes, profileRes, docsRes] = await Promise.all([
+      fetch("/api/applications"),
+      fetch("/api/profile"),
+      fetch("/api/documents"),
+    ]);
+    if (appsRes.ok) {
+      const data = await appsRes.json();
       setApplications(data.applications);
+    }
+    if (profileRes.ok) {
+      const data = await profileRes.json();
+      setProfile(data.profile);
+    }
+    if (docsRes.ok) {
+      const data = await docsRes.json();
+      setDocuments(data.documents);
     }
     setLoading(false);
   }, []);
@@ -64,6 +81,28 @@ export function ApplicationsClient({
   useEffect(() => {
     setApplications(initialApplications);
   }, [initialApplications]);
+
+  useEffect(() => {
+    setProfile(initialProfile);
+  }, [initialProfile]);
+
+  useEffect(() => {
+    setDocuments(initialDocuments);
+  }, [initialDocuments]);
+
+  useEffect(() => {
+    const handler = () => {
+      reload();
+    };
+    window.addEventListener(APP_DATA_CHANGED, handler);
+    return () => window.removeEventListener(APP_DATA_CHANGED, handler);
+  }, [reload]);
+
+  async function markAsSubmitted(id: string) {
+    setMarkingSubmittedId(id);
+    await moveStatus(id, "submitted");
+    setMarkingSubmittedId(null);
+  }
 
   async function moveStatus(id: string, status: ApplicationStatus) {
     const res = await fetch("/api/applications", {
@@ -243,6 +282,16 @@ export function ApplicationsClient({
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <PreparationDisclaimer admissionsUrl={admissionsUrl} />
+
+                  <ApplicationExportPanel
+                    applicationId={app.id}
+                    programName={app.program.name}
+                    schoolName={app.program.school?.name || "University"}
+                    admissionsUrl={admissionsUrl}
+                    status={app.status}
+                    onMarkSubmitted={() => markAsSubmitted(app.id)}
+                    markingSubmitted={markingSubmittedId === app.id}
+                  />
 
                   <div className="rounded-lg bg-slate-50 p-4 space-y-2">
                     <div className="flex items-center justify-between text-sm">

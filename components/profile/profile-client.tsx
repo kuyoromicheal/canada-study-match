@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { isContactProfileComplete } from "@/lib/validation/contact";
+import { notifyAppDataChanged } from "@/lib/realtime/events";
 import {
   getCountryOptions,
   resolveCountryCode,
@@ -83,6 +84,7 @@ export function ProfileClient({ initialProfile }: { initialProfile: StudentProfi
 
     setProfile(data.profile);
     setSaved(true);
+    notifyAppDataChanged();
     router.refresh();
   }
 

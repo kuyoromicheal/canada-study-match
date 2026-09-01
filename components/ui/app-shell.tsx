@@ -10,6 +10,8 @@ import {
   ClipboardList,
   GraduationCap,
   LayoutDashboard,
+  ListChecks,
+  Mail,
   Menu,
   Search,
   Settings,
@@ -19,12 +21,17 @@ import {
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { SignOutButton } from "@/components/auth/sign-out-button";
+import { RealtimeSyncProvider } from "@/components/providers/realtime-sync-provider";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/programs", label: "Programs", icon: Search },
+  { href: "/gmail", label: "Gmail Center", icon: Mail },
+  { href: "/cv", label: "CV Builder", icon: GraduationCap },
+  { href: "/outreach", label: "Outreach", icon: Users },
   { href: "/supervisors", label: "Supervisors", icon: Users },
   { href: "/applications", label: "Applications", icon: ClipboardList },
+  { href: "/plan", label: "Application Plan", icon: ListChecks },
   { href: "/profile", label: "Profile", icon: BookOpen },
   { href: "/admin", label: "Admin", icon: Settings },
 ];
@@ -116,7 +123,9 @@ export function AppShell({
         )}
       </header>
 
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <RealtimeSyncProvider>{children}</RealtimeSyncProvider>
+      </main>
 
       <footer className="border-t border-slate-200 bg-white mt-auto">
         <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
