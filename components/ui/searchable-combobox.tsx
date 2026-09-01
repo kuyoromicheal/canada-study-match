@@ -44,8 +44,13 @@ export function SearchableCombobox({
             o.value.toLowerCase().includes(q)
         )
       : options;
-    return list.slice(0, 80);
+    return list;
   }, [options, query]);
+
+  const displayList = useMemo(() => {
+    const limit = query.trim() ? 200 : 150;
+    return filtered.slice(0, limit);
+  }, [filtered, query]);
 
   useEffect(() => {
     function onDocClick(e: MouseEvent) {
@@ -89,9 +94,9 @@ export function SearchableCombobox({
       {open && !disabled && (
         <ul
           role="listbox"
-          className="absolute z-50 mt-1 max-h-60 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg"
+          className="absolute z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg"
         >
-          {filtered.map((o) => (
+          {displayList.map((o) => (
             <li key={o.value} role="option" aria-selected={value === o.value}>
               <button
                 type="button"
@@ -110,8 +115,13 @@ export function SearchableCombobox({
               </button>
             </li>
           ))}
-          {filtered.length === 0 && (
+          {displayList.length === 0 && (
             <li className="px-3 py-2 text-sm text-slate-500">No matches found</li>
+          )}
+          {filtered.length > displayList.length && (
+            <li className="px-3 py-2 text-xs text-slate-500 border-t border-slate-100">
+              Showing {displayList.length} of {filtered.length} — type to narrow results
+            </li>
           )}
         </ul>
       )}

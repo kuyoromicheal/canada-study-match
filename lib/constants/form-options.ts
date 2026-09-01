@@ -6,6 +6,7 @@ import type {
   InstitutionType,
   ProgramType,
 } from "@/types/database";
+import { FIELDS_OF_STUDY, UNDERGRADUATE_COURSE_SUGGESTIONS } from "@/lib/constants/fields-of-study";
 
 countries.registerLocale(enLocale);
 
@@ -183,18 +184,20 @@ export const YEARS_OF_EXPERIENCE_OPTIONS: FormOption[] = [
   { value: "11", label: "More than 10 years" },
 ];
 
-export const COURSE_SUGGESTIONS = [
-  "Biochemistry",
-  "Cell Biology",
-  "Molecular Biology",
-  "Statistics",
-  "Microbiology",
-  "Genetics",
-  "Organic Chemistry",
-  "Computer Science",
-  "Programming",
-  "Research Methods",
-] as const;
+// ---------------------------------------------------------------------------
+// Field of study — major matches programs.field + Nigerian/international catalogue
+// ---------------------------------------------------------------------------
+
+export function buildProgramFieldOptions(catalogFields: string[]): FormOption[] {
+  const merged = new Set<string>([...FIELDS_OF_STUDY, ...catalogFields.filter(Boolean)]);
+  return Array.from(merged)
+    .sort((a, b) => a.localeCompare(b))
+    .map((f) => ({ value: f, label: f }));
+}
+
+export function getFieldOfStudyCount(catalogFields: string[]): number {
+  return new Set([...FIELDS_OF_STUDY, ...catalogFields.filter(Boolean)]).size;
+}
 
 export const RESEARCH_INTEREST_SUGGESTIONS = [
   "Microbiology",
@@ -209,16 +212,7 @@ export const RESEARCH_INTEREST_SUGGESTIONS = [
   "Environmental science",
 ] as const;
 
-// ---------------------------------------------------------------------------
-// Field of study — major matches programs.field (catalog-controlled)
-// ---------------------------------------------------------------------------
-
-export function buildProgramFieldOptions(catalogFields: string[]): FormOption[] {
-  const unique = [...new Set(catalogFields.filter(Boolean))].sort((a, b) =>
-    a.localeCompare(b)
-  );
-  return unique.map((f) => ({ value: f, label: f }));
-}
+export const COURSE_SUGGESTIONS = UNDERGRADUATE_COURSE_SUGGESTIONS;
 
 // ---------------------------------------------------------------------------
 // Field category — CIP-style broad categories (stored in field_category / desired_field)

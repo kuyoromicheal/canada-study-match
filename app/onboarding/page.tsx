@@ -26,6 +26,7 @@ import {
   APPLICATION_FEE_OPTIONS,
   booleansToInternationalStatus,
   buildProgramFieldOptions,
+  getFieldOfStudyCount,
   COURSE_SUGGESTIONS,
   FIELD_CATEGORY_OPTIONS,
   getCountryOptions,
@@ -487,7 +488,8 @@ export default function OnboardingPage() {
                   value={watch("major") || ""}
                   onChange={(v) => setValue("major", v)}
                   options={programFieldOptions}
-                  hint="Must match program fields in our catalog for accurate matching"
+                  placeholder="Type to search (e.g. Microbiology, MBBS, Civil Engineering)..."
+                  hint={`${getFieldOfStudyCount(catalogFields)}+ fields including common Nigerian undergraduate programmes — type to search`}
                 />
                 {errors.major && <p className="text-xs text-red-600">{errors.major.message}</p>}
                 <ChipSuggestions label="Relevant courses" suggestions={COURSE_SUGGESTIONS} value={watch("relevant_courses") || ""} onChange={(v) => setValue("relevant_courses", v)} inputId="relevant_courses" register={register} fieldName="relevant_courses" />
@@ -563,11 +565,12 @@ export default function OnboardingPage() {
                 {errors.field_category && <p className="text-xs text-red-600">{errors.field_category.message}</p>}
                 <SearchableCombobox
                   id="desired_field"
-                  label="Specific field (optional, matches program catalog)"
+                  label="Specific field (optional, for program matching)"
                   value={watch("desired_field") || ""}
                   onChange={(v) => setValue("desired_field", v)}
                   options={programFieldOptions}
-                  hint="e.g. Microbiology under Biological & Biomedical Sciences"
+                  placeholder="e.g. Microbiology, Computer Science..."
+                  hint="Same full list as major — pick the closest match to programs you want"
                 />
                 <FormSelectField
                   label="Desired program type"
