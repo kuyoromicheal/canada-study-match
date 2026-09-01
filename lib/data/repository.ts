@@ -41,7 +41,7 @@ import { calculateProfileCompleteness } from "@/types/database";
 
 export { getProvinces, getFields, getCities, getIntakes } from "./catalog-filters";
 
-function useSeedFallback(): boolean {
+function isSeedCatalogMode(): boolean {
   return !isSupabaseConfigured();
 }
 
@@ -143,7 +143,7 @@ function filterEnrichedPrograms(
 }
 
 export async function getSchools(): Promise<School[]> {
-  if (!useSeedFallback()) {
+  if (!isSeedCatalogMode()) {
     const supabase = await createCatalogClient();
     if (supabase) {
       const { data } = await supabase.from("schools").select("*").order("name");
@@ -154,7 +154,7 @@ export async function getSchools(): Promise<School[]> {
 }
 
 export async function getPrograms(filters?: ProgramFilters): Promise<ProgramWithDetails[]> {
-  if (!useSeedFallback()) {
+  if (!isSeedCatalogMode()) {
     const supabase = await createCatalogClient();
     if (supabase) {
       let query = supabase.from("programs").select("*");
@@ -176,7 +176,7 @@ export async function getPrograms(filters?: ProgramFilters): Promise<ProgramWith
 }
 
 export async function getProgramById(id: string): Promise<ProgramWithDetails | null> {
-  if (!useSeedFallback()) {
+  if (!isSeedCatalogMode()) {
     const supabase = await createCatalogClient();
     if (supabase) {
       const { data } = await supabase.from("programs").select("*").eq("id", id).maybeSingle();
@@ -308,7 +308,7 @@ export async function getUpcomingDeadlines(
 ): Promise<(ApplicationDeadline & { program?: Program; school?: School })[]> {
   const today = new Date().toISOString().slice(0, 10);
 
-  if (!useSeedFallback()) {
+  if (!isSeedCatalogMode()) {
     const supabase = await createCatalogClient();
     if (supabase) {
       const { data: deadlines } = await supabase
@@ -359,7 +359,7 @@ export async function getUpcomingDeadlines(
 export async function getSavedPrograms(
   userId: string
 ): Promise<(SavedProgram & { program: ProgramWithDetails })[]> {
-  if (useSeedFallback()) return [];
+  if (isSeedCatalogMode()) return [];
 
   const supabase = await createClient();
   if (!supabase) return [];
@@ -385,7 +385,7 @@ export async function saveProgramForUser(
   programId: string,
   matchScore?: number
 ): Promise<SavedProgram | null> {
-  if (useSeedFallback()) return null;
+  if (isSeedCatalogMode()) return null;
 
   const supabase = await createClient();
   if (!supabase) return null;
@@ -408,7 +408,7 @@ export async function saveProgramForUser(
 }
 
 export async function unsaveProgramForUser(userId: string, programId: string): Promise<boolean> {
-  if (useSeedFallback()) return false;
+  if (isSeedCatalogMode()) return false;
 
   const supabase = await createClient();
   if (!supabase) return false;
@@ -425,7 +425,7 @@ export async function unsaveProgramForUser(userId: string, programId: string): P
 export async function getApplications(
   userId: string
 ): Promise<(ApplicationTracker & { program: ProgramWithDetails; checklist: ApplicationChecklistItem[] })[]> {
-  if (useSeedFallback()) return [];
+  if (isSeedCatalogMode()) return [];
 
   const supabase = await createClient();
   if (!supabase) return [];
@@ -463,9 +463,10 @@ export async function getApplications(
 export async function createApplicationForUser(
   userId: string,
   programId: string,
-  matchScore?: number
+  matchScore?: number,
+  status: ApplicationStatus = "shortlisted"
 ): Promise<ApplicationTracker | null> {
-  if (useSeedFallback()) return null;
+  if (isSeedCatalogMode()) return null;
 
   const supabase = await createClient();
   if (!supabase) return null;
@@ -484,7 +485,7 @@ export async function createApplicationForUser(
       {
         user_id: userId,
         program_id: programId,
-        status: "researching" as ApplicationStatus,
+        status,
         deadline_date: nextDeadline?.deadline_date ?? null,
         match_score: matchScore ?? null,
         updated_at: new Date().toISOString(),
@@ -521,12 +522,35 @@ export async function createApplicationForUser(
   return app as ApplicationTracker;
 }
 
+export async function createApplicationsBulk(
+  userId: string,
+  programIds: string[],
+  matchScores?: Record<string, number>,
+  status: ApplicationStatus = "shortlisted"
+): Promise<{ created: ApplicationTracker[]; failed: string[] }> {
+  const created: ApplicationTracker[] = [];
+  const failed: string[] = [];
+
+  for (const programId of programIds) {
+    const app = await createApplicationForUser(
+      userId,
+      programId,
+      matchScores?.[programId],
+      status
+    );
+    if (app) created.push(app);
+    else failed.push(programId);
+  }
+
+  return { created, failed };
+}
+
 export async function updateApplicationStatus(
   userId: string,
   applicationId: string,
   status: ApplicationStatus
 ): Promise<boolean> {
-  if (useSeedFallback()) return false;
+  if (isSeedCatalogMode()) return false;
 
   const supabase = await createClient();
   if (!supabase) return false;
@@ -545,7 +569,7 @@ export async function updateChecklistItem(
   itemId: string,
   updates: { is_completed?: boolean; linked_document_id?: string | null }
 ): Promise<boolean> {
-  if (useSeedFallback()) return false;
+  if (isSeedCatalogMode()) return false;
 
   const supabase = await createClient();
   if (!supabase) return false;
@@ -568,7 +592,7 @@ export async function updateChecklistItem(
 }
 
 export async function getApplicationForUser(userId: string, applicationId: string) {
-  if (useSeedFallback()) return null;
+  if (isSeedCatalogMode()) return null;
 
   const supabase = await createClient();
   if (!supabase) return null;
@@ -598,12 +622,39 @@ export async function getApplicationForUser(userId: string, applicationId: strin
   };
 }
 
+export async function getApplicationChecklistForProgram(
+  userId: string,
+  programId: string
+): Promise<ApplicationChecklistItem[]> {
+  if (isSeedCatalogMode()) return [];
+
+  const supabase = await createClient();
+  if (!supabase) return [];
+
+  const { data: app } = await supabase
+    .from("application_tracker")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("program_id", programId)
+    .maybeSingle();
+
+  if (!app) return [];
+
+  const { data: checklist } = await supabase
+    .from("application_checklist_items")
+    .select("*")
+    .eq("application_id", app.id)
+    .order("sort_order");
+
+  return (checklist as ApplicationChecklistItem[]) || [];
+}
+
 export async function getRecordsNeedingVerification(): Promise<{
   schools: School[];
   programs: Program[];
   supervisors: Supervisor[];
 }> {
-  if (!useSeedFallback()) {
+  if (!isSeedCatalogMode()) {
     const admin = await import("@/lib/supabase/admin").then((m) => m.createAdminClient());
     const client = admin ?? (await createClient());
     if (client) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient, getAuthConfigError, isSupabaseConfigured } from "@/lib/supabase/client";
@@ -35,19 +35,16 @@ function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [configError, setConfigError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [magicLinkSent, setMagicLinkSent] = useState(false);
-  const [info, setInfo] = useState<string | null>(null);
-
-  useEffect(() => {
-    setConfigError(getAuthConfigError());
-    const callbackError = authCallbackMessage(searchParams.get("error"));
-    if (callbackError) setError(callbackError);
-    if (searchParams.get("message") === "confirm_email") {
-      setInfo("Account created — check your email to confirm, then sign in here.");
-    }
-  }, [searchParams]);
+  const configError = getAuthConfigError();
+  const urlError = authCallbackMessage(searchParams.get("error"));
+  const urlInfo =
+    searchParams.get("message") === "confirm_email"
+      ? "Account created — check your email to confirm, then sign in here."
+      : null;
+  const displayError = error || urlError || "";
+  const displayInfo = urlInfo;
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -56,7 +53,6 @@ function LoginForm() {
 
     const configErr = getAuthConfigError();
     if (configErr) {
-      setConfigError(configErr);
       setError(configErr);
       setLoading(false);
       return;
@@ -127,9 +123,9 @@ function LoginForm() {
           <CardDescription>Sign in to Canada Study Match</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {info && (
+          {displayInfo && (
             <Alert variant="info" title="Confirm your email">
-              {info}
+              {displayInfo}
             </Alert>
           )}
 
@@ -153,7 +149,7 @@ function LoginForm() {
                 <Label htmlFor="password">Password</Label>
                 <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
               </div>
-              {error && <Alert variant="error" title="Sign in failed">{error}</Alert>}
+              {displayError && <Alert variant="error" title="Sign in failed">{displayError}</Alert>}
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Signing in..." : "Sign in"}
               </Button>

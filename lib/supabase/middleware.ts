@@ -71,7 +71,7 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  const protectedPaths = ["/dashboard", "/onboarding", "/applications", "/profile"];
+  const protectedPaths = ["/dashboard", "/onboarding", "/applications", "/profile", "/plan", "/gmail", "/cv", "/outreach", "/supervisors"];
   const isProtected = protectedPaths.some((path) => pathname.startsWith(path));
 
   if (isProtected && !user) {

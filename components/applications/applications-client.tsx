@@ -10,7 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { Select } from "@/components/ui/select";
+import { BulkPreparePanel } from "@/components/applications/bulk-prepare-panel";
 import { calculatePackageCompletion } from "@/lib/applications/package-completion";
+import { getPackageReadiness, SUBMISSION_BOUNDARY_MESSAGE } from "@/lib/applications/package-readiness";
 import { DOCUMENT_TYPE_LABELS } from "@/lib/documents/constants";
 import {
   APPLICATION_STATUS_LABELS,
@@ -26,6 +28,7 @@ import { APP_DATA_CHANGED } from "@/lib/realtime/events";
 import { Download, LayoutGrid, List } from "lucide-react";
 
 const STATUSES: ApplicationStatus[] = [
+  "shortlisted",
   "researching",
   "preparing",
   "submitted",
@@ -177,6 +180,8 @@ export function ApplicationsClient({
     <div className="space-y-6">
       <PreparationDisclaimer />
 
+      <BulkPreparePanel applications={applications} profile={profile} />
+
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Application Tracker</h1>
@@ -218,6 +223,8 @@ export function ApplicationsClient({
                   .filter((a) => a.status === status)
                   .map((app) => {
                     const completion = calculatePackageCompletion(app.checklist, profile);
+                    const school = app.program.school?.name || "University";
+                    const readiness = getPackageReadiness(app.checklist, profile, school);
                     return (
                       <Card key={app.id} className="hover:shadow-md transition-shadow">
                         <CardHeader className="p-4 pb-2">
@@ -262,6 +269,8 @@ export function ApplicationsClient({
         <div className="space-y-4">
           {applications.map((app) => {
             const completion = calculatePackageCompletion(app.checklist, profile);
+            const school = app.program.school?.name || "University";
+            const readiness = getPackageReadiness(app.checklist, profile, school);
             const admissionsUrl =
               app.program.official_admissions_url || app.program.source_url || null;
 
@@ -277,11 +286,38 @@ export function ApplicationsClient({
                       </CardTitle>
                       <p className="text-sm text-slate-500">{app.program.school?.name}</p>
                     </div>
-                    <Badge>{APPLICATION_STATUS_LABELS[app.status]}</Badge>
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <Badge>{APPLICATION_STATUS_LABELS[app.status]}</Badge>
+                      <Badge variant={readiness.status === "ready" ? "success" : "warning"}>
+                        {readiness.status === "ready" ? "Ready to submit" : "Missing items"}
+                      </Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <PreparationDisclaimer admissionsUrl={admissionsUrl} />
+
+                  <p className="text-xs text-slate-500 border-l-2 border-slate-200 pl-3">
+                    {SUBMISSION_BOUNDARY_MESSAGE}
+                    {admissionsUrl && (
+                      <>
+                        {" "}
+                        <a href={admissionsUrl} target="_blank" rel="noopener noreferrer" className="text-red-700 underline">
+                          Official portal
+                        </a>
+                      </>
+                    )}
+                  </p>
+
+                  {readiness.missingItems.length > 0 && (
+                    <Alert variant="warning" title="Missing before this package is submission-ready">
+                      <ul className="text-sm list-disc pl-4 space-y-0.5">
+                        {readiness.missingItems.map((m) => (
+                          <li key={m}>{m}</li>
+                        ))}
+                      </ul>
+                    </Alert>
+                  )}
 
                   <ApplicationExportPanel
                     applicationId={app.id}

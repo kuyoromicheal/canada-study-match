@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { CatalogFooterText } from "@/components/catalog/catalog-notice";
 import type { CatalogStatus } from "@/lib/data/catalog-status";
 import {
+  BookMarked,
   BookOpen,
   ClipboardList,
   GraduationCap,
@@ -26,6 +27,7 @@ import { RealtimeSyncProvider } from "@/components/providers/realtime-sync-provi
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/programs", label: "Programs", icon: Search },
+  { href: "/saved", label: "Saved", icon: BookMarked },
   { href: "/gmail", label: "Gmail Center", icon: Mail },
   { href: "/cv", label: "CV Builder", icon: GraduationCap },
   { href: "/outreach", label: "Outreach", icon: Users },

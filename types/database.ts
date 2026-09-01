@@ -59,6 +59,7 @@ export type CanadianProvince = (typeof CANADIAN_PROVINCES)[number];
 export type ApplicationFeeFilter = "free" | "paid";
 
 export type ApplicationStatus =
+  | "shortlisted"
   | "researching"
   | "preparing"
   | "submitted"
@@ -467,6 +468,7 @@ export function tierToLabel(tier: MatchTier): string {
 }
 
 export const APPLICATION_STATUS_LABELS: Record<ApplicationStatus, string> = {
+  shortlisted: "Shortlisted",
   researching: "Researching",
   preparing: "Preparing",
   submitted: "Submitted",

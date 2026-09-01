@@ -1,7 +1,9 @@
 import { getSessionUserId } from "@/lib/auth/session";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getProgramMatches, getStudentProfile, getUpcomingDeadlines } from "@/lib/data/repository";
+import { CrossApplicationGapsCard } from "@/components/dashboard/cross-application-gaps";
+import { detectCrossApplicationGaps } from "@/lib/applications/cross-application-gaps";
+import { getProgramMatches, getApplications, getStudentProfile, getUpcomingDeadlines } from "@/lib/data/repository";
 import { getCatalogStatus } from "@/lib/data/catalog-status";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { CatalogNotice } from "@/components/catalog/catalog-notice";
@@ -24,12 +26,14 @@ export default async function DashboardPage() {
     redirect("/login?redirect=/dashboard");
   }
 
-  const [profile, catalogStatus, deadlines] = await Promise.all([
+  const [profile, catalogStatus, deadlines, applications] = await Promise.all([
     getStudentProfile(userId),
     getCatalogStatus(),
     getUpcomingDeadlines(5),
+    getApplications(userId),
   ]);
   const matches = profile ? await getProgramMatches(profile) : [];
+  const crossGaps = detectCrossApplicationGaps(applications, profile);
   const topMatches = matches.filter((m) => m.matchResult).slice(0, 3);
   const supervisorActions = matches.filter(
     (m) =>
@@ -46,6 +50,8 @@ export default async function DashboardPage() {
       </div>
 
       <CatalogNotice status={catalogStatus} />
+
+      <CrossApplicationGapsCard gaps={crossGaps} />
 
       {!profile && (
         <Alert variant="info" title="Complete your profile">
