@@ -10,6 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { isContactProfileComplete } from "@/lib/validation/contact";
+import { countryOptions } from "@/lib/onboarding/options";
+import { SelectField } from "@/components/onboarding/select-field";
 import type { StudentProfile, StudentProfileInput } from "@/types/database";
 import { calculateProfileCompleteness } from "@/types/database";
 
@@ -112,8 +114,22 @@ export function ProfileClient({ initialProfile }: { initialProfile: StudentProfi
             <Field label="Full name" value={profile.full_name || ""} onChange={(v) => updateField("full_name", v)} required />
             <Field label="Email" type="email" value={profile.email || ""} onChange={(v) => updateField("email", v)} />
             <Field label="Phone number" value={profile.phone_number || ""} onChange={(v) => updateField("phone_number", v)} placeholder="+1 416 555 0100" />
-            <Field label="Citizenship country" value={profile.citizenship_country || ""} onChange={(v) => updateField("citizenship_country", v)} />
-            <Field label="Current country" value={profile.current_country || ""} onChange={(v) => updateField("current_country", v)} />
+            <SelectField
+              label="Citizenship country"
+              id="citizenship_country"
+              required
+              value={profile.citizenship_country || ""}
+              onChange={(v) => updateField("citizenship_country", v)}
+              options={countryOptions()}
+              hint="Country on your passport"
+            />
+            <SelectField
+              label="Current country"
+              id="current_country"
+              value={profile.current_country || ""}
+              onChange={(v) => updateField("current_country", v)}
+              options={countryOptions()}
+            />
 
             <div className="pt-2 border-t border-slate-100">
               <p className="text-sm font-medium text-slate-700 mb-3">Mailing address</p>
@@ -125,7 +141,13 @@ export function ProfileClient({ initialProfile }: { initialProfile: StudentProfi
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <Field label="Postal / ZIP code" value={profile.mailing_postal_code || ""} onChange={(v) => updateField("mailing_postal_code", v)} />
-                  <Field label="Country" value={profile.mailing_country || ""} onChange={(v) => updateField("mailing_country", v)} />
+                  <SelectField
+                    label="Country"
+                    id="mailing_country"
+                    value={profile.mailing_country || ""}
+                    onChange={(v) => updateField("mailing_country", v)}
+                    options={countryOptions()}
+                  />
                 </div>
               </div>
             </div>
