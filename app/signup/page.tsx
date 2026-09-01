@@ -42,15 +42,21 @@ export default function SignupPage() {
       password,
       options: {
         data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/onboarding`,
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`,
       },
     });
     setLoading(false);
 
     if (error) {
-      setError(error.message);
+      if (error.message.toLowerCase().includes("invalid api key")) {
+        setError(
+          "Invalid API key — fix NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel and redeploy without build cache."
+        );
+      } else {
+        setError(error.message);
+      }
     } else {
-      router.push("/onboarding");
+      router.push("/login?message=confirm_email");
       router.refresh();
     }
   }

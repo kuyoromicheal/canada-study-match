@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createCatalogClient } from "@/lib/supabase/catalog-client";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 
 export type CatalogMode = "seed" | "empty" | "mixed" | "live";
@@ -21,58 +21,58 @@ const SEED_FALLBACK: CatalogStatus = {
   demoProgramCount: 0,
 };
 
+async function countRows(
+  table: "schools" | "programs",
+  filters?: { is_demo_record?: boolean; verification_status?: string }
+): Promise<number> {
+  const supabase = await createCatalogClient();
+  if (!supabase) return 0;
+
+  let query = supabase.from(table).select("id", { count: "exact", head: true });
+  if (filters?.is_demo_record !== undefined) {
+    query = query.eq("is_demo_record", filters.is_demo_record);
+  }
+  if (filters?.verification_status) {
+    query = query.eq("verification_status", filters.verification_status);
+  }
+
+  const { count, error } = await query;
+  if (error || count == null) return 0;
+  return count;
+}
+
 export async function getCatalogStatus(): Promise<CatalogStatus> {
   if (!isSupabaseConfigured()) return SEED_FALLBACK;
 
-  const supabase = await createClient();
+  const supabase = await createCatalogClient();
   if (!supabase) return SEED_FALLBACK;
 
-  const [
-    { count: realSchoolCount },
-    { count: realProgramCount },
-    { count: verifiedProgramCount },
-    { count: demoProgramCount },
-  ] = await Promise.all([
-    supabase
-      .from("schools")
-      .select("*", { count: "exact", head: true })
-      .eq("is_demo_record", false),
-    supabase
-      .from("programs")
-      .select("*", { count: "exact", head: true })
-      .eq("is_demo_record", false),
-    supabase
-      .from("programs")
-      .select("*", { count: "exact", head: true })
-      .eq("is_demo_record", false)
-      .eq("verification_status", "verified"),
-    supabase
-      .from("programs")
-      .select("*", { count: "exact", head: true })
-      .eq("is_demo_record", true),
-  ]);
+  const [realSchoolCount, realProgramCount, verifiedProgramCount, demoProgramCount] =
+    await Promise.all([
+      countRows("schools", { is_demo_record: false }),
+      countRows("programs", { is_demo_record: false }),
+      countRows("programs", { is_demo_record: false, verification_status: "verified" }),
+      countRows("programs", { is_demo_record: true }),
+    ]);
 
-  const realPrograms = realProgramCount ?? 0;
-  const demoPrograms = demoProgramCount ?? 0;
-
-  if (realPrograms === 0) {
+  if (realProgramCount === 0) {
     return {
       mode: "empty",
       supabaseConfigured: true,
-      realSchoolCount: realSchoolCount ?? 0,
+      realSchoolCount,
       realProgramCount: 0,
       verifiedProgramCount: 0,
-      demoProgramCount: demoPrograms,
+      demoProgramCount,
     };
   }
 
   return {
-    mode: demoPrograms > 0 ? "mixed" : "live",
+    mode: demoProgramCount > 0 ? "mixed" : "live",
     supabaseConfigured: true,
-    realSchoolCount: realSchoolCount ?? 0,
-    realProgramCount: realPrograms,
-    verifiedProgramCount: verifiedProgramCount ?? 0,
-    demoProgramCount: demoPrograms,
+    realSchoolCount,
+    realProgramCount,
+    verifiedProgramCount,
+    demoProgramCount,
   };
 }
 

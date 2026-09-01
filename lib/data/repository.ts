@@ -7,6 +7,7 @@ import {
 import { buildChecklistFromProgram } from "@/lib/applications/checklist-from-program";
 import { getSessionUserId } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { createCatalogClient } from "@/lib/supabase/catalog-client";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import {
   getSeedDeadlines,
@@ -61,7 +62,7 @@ function enrichProgramFromSeed(program: Program): ProgramWithDetails {
 }
 
 async function enrichProgramFromSupabase(
-  supabase: NonNullable<Awaited<ReturnType<typeof createClient>>>,
+  supabase: NonNullable<Awaited<ReturnType<typeof createCatalogClient>>>,
   program: Program
 ): Promise<ProgramWithDetails> {
   const [
@@ -143,7 +144,7 @@ function filterEnrichedPrograms(
 
 export async function getSchools(): Promise<School[]> {
   if (!useSeedFallback()) {
-    const supabase = await createClient();
+    const supabase = await createCatalogClient();
     if (supabase) {
       const { data } = await supabase.from("schools").select("*").order("name");
       return (data as School[]) || [];
@@ -154,7 +155,7 @@ export async function getSchools(): Promise<School[]> {
 
 export async function getPrograms(filters?: ProgramFilters): Promise<ProgramWithDetails[]> {
   if (!useSeedFallback()) {
-    const supabase = await createClient();
+    const supabase = await createCatalogClient();
     if (supabase) {
       let query = supabase.from("programs").select("*");
       if (filters?.province) query = query.eq("province", filters.province);
@@ -176,7 +177,7 @@ export async function getPrograms(filters?: ProgramFilters): Promise<ProgramWith
 
 export async function getProgramById(id: string): Promise<ProgramWithDetails | null> {
   if (!useSeedFallback()) {
-    const supabase = await createClient();
+    const supabase = await createCatalogClient();
     if (supabase) {
       const { data } = await supabase.from("programs").select("*").eq("id", id).maybeSingle();
       if (data) return enrichProgramFromSupabase(supabase, data as Program);
@@ -308,7 +309,7 @@ export async function getUpcomingDeadlines(
   const today = new Date().toISOString().slice(0, 10);
 
   if (!useSeedFallback()) {
-    const supabase = await createClient();
+    const supabase = await createCatalogClient();
     if (supabase) {
       const { data: deadlines } = await supabase
         .from("application_deadlines")

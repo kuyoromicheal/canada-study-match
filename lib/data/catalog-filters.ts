@@ -1,10 +1,10 @@
-import { createClient } from "@/lib/supabase/server";
+import { createCatalogClient } from "@/lib/supabase/catalog-client";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { getSeedPrograms } from "./seed-helpers";
 
 async function getProgramRowsForFilters() {
   if (isSupabaseConfigured()) {
-    const supabase = await createClient();
+    const supabase = await createCatalogClient();
     if (supabase) {
       const { data } = await supabase
         .from("programs")
