@@ -94,7 +94,7 @@ const STEPS = [
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [provinces, setProvinces] = useState<string[]>([]);
@@ -264,7 +264,12 @@ export default function OnboardingPage() {
       <>
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-slate-900">Build Your Profile</h1>
-        <p className="text-slate-500 mt-1">Step {step + 1} of {STEPS.length}: {STEPS[step].title}</p>
+        <p className="text-slate-500 mt-1">
+          Step {step + 1} of {STEPS.length}: {STEPS[step].title}
+          {step > 0 && (
+            <span className="text-slate-400"> · Gmail setup is on step 1</span>
+          )}
+        </p>
         <Progress value={progress} className="mt-4" />
       </div>
 
