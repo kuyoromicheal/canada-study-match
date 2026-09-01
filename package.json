@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build && node scripts/prepare-standalone.mjs",
+    "build": "next build",
+    "build:standalone": "next build && node scripts/prepare-standalone.mjs",
     "start": "next start",
     "start:dist": "node dist/standalone/server.js",
     "deploy": "vercel deploy --prod --yes",

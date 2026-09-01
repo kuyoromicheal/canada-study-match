@@ -13,7 +13,8 @@
 # testing
 /coverage
 
-# next.js build output (distDir: dist)
+# next.js build output
+/.next/
 /dist/
 /out/
 
@@ -35,6 +36,9 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# supabase local CLI cache
+supabase/.temp/
 
 # typescript
 *.tsbuildinfo

@@ -1,10 +1,13 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  // Build output goes to ./dist instead of ./.next
-  distDir: "dist",
-  // Portable Node server bundle at dist/standalone (for VPS/Docker/manual deploy)
-  output: "standalone",
-};
+// Vercel requires the default .next output. Use dist/ + standalone only for local/VPS builds.
+const isVercel = process.env.VERCEL === "1";
+
+const nextConfig: NextConfig = isVercel
+  ? {}
+  : {
+      distDir: "dist",
+      output: "standalone",
+    };
 
 export default nextConfig;
