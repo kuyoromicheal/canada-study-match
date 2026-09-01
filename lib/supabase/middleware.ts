@@ -72,7 +72,7 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  const protectedPaths = ["/dashboard", "/onboarding", "/applications"];
+  const protectedPaths = ["/dashboard", "/onboarding", "/applications", "/profile"];
   const isProtected = protectedPaths.some((path) => pathname.startsWith(path));
 
   if (isProtected && !user) {

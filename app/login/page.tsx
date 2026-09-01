@@ -26,13 +26,15 @@ export default function LoginPage() {
     setLoading(true);
 
     if (!isSupabaseConfigured()) {
-      router.push("/dashboard");
+      setError("Supabase is not configured on this deployment.");
+      setLoading(false);
       return;
     }
 
     const supabase = createClient();
     if (!supabase) {
-      router.push("/dashboard");
+      setError("Unable to connect to Supabase.");
+      setLoading(false);
       return;
     }
 
@@ -54,7 +56,7 @@ export default function LoginPage() {
     }
 
     if (!isSupabaseConfigured()) {
-      router.push("/dashboard");
+      setError("Supabase is not configured on this deployment.");
       return;
     }
 
@@ -82,8 +84,8 @@ export default function LoginPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {!isSupabaseConfigured() && (
-            <Alert variant="info" title="Demo Mode">
-              Supabase not configured. Click sign in to explore with demo data.
+            <Alert variant="warning" title="Setup required">
+              Supabase environment variables are missing. Sign-in requires a configured deployment.
             </Alert>
           )}
 

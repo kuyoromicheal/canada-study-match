@@ -2,19 +2,26 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { PreparationDisclaimer } from "@/components/applications/preparation-disclaimer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
+import { Progress } from "@/components/ui/progress";
+import { Select } from "@/components/ui/select";
+import { calculatePackageCompletion } from "@/lib/applications/package-completion";
+import { DOCUMENT_TYPE_LABELS } from "@/lib/documents/constants";
 import {
   APPLICATION_STATUS_LABELS,
   type ApplicationChecklistItem,
   type ApplicationStatus,
   type ApplicationTracker,
   type ProgramWithDetails,
+  type StudentDocument,
+  type StudentProfile,
 } from "@/types/database";
 import { formatDate } from "@/lib/utils";
-import { LayoutGrid, List } from "lucide-react";
+import { Download, LayoutGrid, List } from "lucide-react";
 
 const STATUSES: ApplicationStatus[] = [
   "researching",
@@ -33,10 +40,14 @@ type ApplicationRow = ApplicationTracker & {
 
 export function ApplicationsClient({
   initialApplications,
+  profile,
+  documents,
 }: {
   initialApplications: ApplicationRow[];
+  profile: StudentProfile | null;
+  documents: StudentDocument[];
 }) {
-  const [view, setView] = useState<"kanban" | "list">("kanban");
+  const [view, setView] = useState<"kanban" | "list">("list");
   const [applications, setApplications] = useState(initialApplications);
   const [loading, setLoading] = useState(false);
 
@@ -67,6 +78,36 @@ export function ApplicationsClient({
     }
   }
 
+  async function linkDocument(appId: string, itemId: string, documentId: string) {
+    const res = await fetch(`/api/applications/${appId}/checklist`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        item_id: itemId,
+        linked_document_id: documentId || null,
+      }),
+    });
+    if (res.ok) {
+      setApplications((apps) =>
+        apps.map((a) => {
+          if (a.id !== appId) return a;
+          return {
+            ...a,
+            checklist: a.checklist.map((item) =>
+              item.id === itemId
+                ? {
+                    ...item,
+                    linked_document_id: documentId || null,
+                    is_completed: Boolean(documentId),
+                  }
+                : item
+            ),
+          };
+        })
+      );
+    }
+  }
+
   async function toggleChecklist(appId: string, itemId: string, isCompleted: boolean) {
     const res = await fetch(`/api/applications/${appId}/checklist`, {
       method: "PATCH",
@@ -88,12 +129,19 @@ export function ApplicationsClient({
     }
   }
 
+  function documentsForItem(item: ApplicationChecklistItem) {
+    if (!item.doc_type) return documents;
+    return documents.filter((d) => d.doc_type === item.doc_type);
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <PreparationDisclaimer />
+
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Application Tracker</h1>
-          <p className="text-slate-500">Track your program applications and document checklist</p>
+          <p className="text-slate-500">Organize materials for each program — download packages when ready</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={reload} disabled={loading}>
@@ -129,84 +177,177 @@ export function ApplicationsClient({
               <div className="space-y-3">
                 {applications
                   .filter((a) => a.status === status)
-                  .map((app) => (
-                    <Card key={app.id} className="hover:shadow-md transition-shadow">
-                      <CardHeader className="p-4 pb-2">
-                        <CardTitle className="text-sm leading-snug">
-                          <Link href={`/programs/${app.program.id}`} className="hover:underline">
-                            {app.program.name}
-                          </Link>
-                        </CardTitle>
-                        <p className="text-xs text-slate-500">{app.program.school?.name}</p>
-                      </CardHeader>
-                      <CardContent className="p-4 pt-0 space-y-2">
-                        {app.deadline_date && (
-                          <p className="text-xs text-slate-500">
-                            Deadline: {formatDate(app.deadline_date)}
-                          </p>
-                        )}
-                        <div className="flex flex-wrap gap-1">
-                          {STATUSES.slice(0, 5).map((s) =>
-                            s !== status ? (
-                              <button
-                                key={s}
-                                type="button"
-                                onClick={() => moveStatus(app.id, s)}
-                                className="text-xs text-red-700 hover:underline"
-                              >
-                                → {APPLICATION_STATUS_LABELS[s]}
-                              </button>
-                            ) : null
+                  .map((app) => {
+                    const completion = calculatePackageCompletion(app.checklist, profile);
+                    return (
+                      <Card key={app.id} className="hover:shadow-md transition-shadow">
+                        <CardHeader className="p-4 pb-2">
+                          <CardTitle className="text-sm leading-snug">
+                            <Link href={`/programs/${app.program.id}`} className="hover:underline">
+                              {app.program.name}
+                            </Link>
+                          </CardTitle>
+                          <p className="text-xs text-slate-500">{app.program.school?.name}</p>
+                        </CardHeader>
+                        <CardContent className="p-4 pt-0 space-y-2">
+                          <Progress value={completion.percent} className="h-1.5" />
+                          <p className="text-xs text-slate-500">{completion.percent}% package ready</p>
+                          {app.deadline_date && (
+                            <p className="text-xs text-slate-500">
+                              Deadline: {formatDate(app.deadline_date)}
+                            </p>
                           )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                          <div className="flex flex-wrap gap-1">
+                            {STATUSES.slice(0, 5).map((s) =>
+                              s !== status ? (
+                                <button
+                                  key={s}
+                                  type="button"
+                                  onClick={() => moveStatus(app.id, s)}
+                                  className="text-xs text-red-700 hover:underline"
+                                >
+                                  → {APPLICATION_STATUS_LABELS[s]}
+                                </button>
+                              ) : null
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
               </div>
             </div>
           ))}
         </div>
       ) : (
         <div className="space-y-4">
-          {applications.map((app) => (
-            <Card key={app.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-base">
-                      <Link href={`/programs/${app.program.id}`} className="hover:underline">
-                        {app.program.name}
-                      </Link>
-                    </CardTitle>
-                    <p className="text-sm text-slate-500">{app.program.school?.name}</p>
+          {applications.map((app) => {
+            const completion = calculatePackageCompletion(app.checklist, profile);
+            const admissionsUrl =
+              app.program.official_admissions_url || app.program.source_url || null;
+
+            return (
+              <Card key={app.id}>
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div>
+                      <CardTitle className="text-base">
+                        <Link href={`/programs/${app.program.id}`} className="hover:underline">
+                          {app.program.name}
+                        </Link>
+                      </CardTitle>
+                      <p className="text-sm text-slate-500">{app.program.school?.name}</p>
+                    </div>
+                    <Badge>{APPLICATION_STATUS_LABELS[app.status]}</Badge>
                   </div>
-                  <Badge>{APPLICATION_STATUS_LABELS[app.status]}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {app.deadline_date && (
-                  <p className="text-sm text-slate-500">Deadline: {formatDate(app.deadline_date)}</p>
-                )}
-                {app.notes && <p className="text-sm text-slate-600 italic">{app.notes}</p>}
-                <div className="space-y-2">
-                  <p className="text-sm font-medium text-slate-700">Document Checklist</p>
-                  {app.checklist.map((item) => (
-                    <label key={item.id} className="flex items-start gap-2 text-sm cursor-pointer">
-                      <input
-                        type="checkbox"
-                        checked={item.is_completed}
-                        onChange={() => toggleChecklist(app.id, item.id, item.is_completed)}
-                        className="mt-0.5"
-                      />
-                      <span className={item.is_required && !item.is_completed ? "text-red-800 font-medium" : "text-slate-700"}>
-                        {item.title}
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <PreparationDisclaimer admissionsUrl={admissionsUrl} />
+
+                  <div className="rounded-lg bg-slate-50 p-4 space-y-2">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium text-slate-700">Application package</span>
+                      <span className="text-slate-600">
+                        {completion.completedUnits} of {completion.totalUnits} ready ({completion.percent}%)
                       </span>
-                    </label>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                    </div>
+                    <Progress value={completion.percent} />
+                    <p className="text-xs text-slate-500">
+                      {completion.linkedCount} of {completion.requiredDocumentCount} required documents linked
+                      {completion.profileComplete ? " · contact profile complete" : " · complete contact info on your profile"}
+                    </p>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <a
+                        href={`/api/applications/${app.id}/package`}
+                        download
+                        className="inline-flex items-center justify-center gap-2 h-8 rounded-md px-3 text-xs font-medium border border-slate-300 bg-white hover:bg-slate-50 text-slate-900"
+                      >
+                        <Download className="h-3.5 w-3.5" />
+                        Download application package
+                      </a>
+                      {!completion.profileComplete && (
+                        <Link
+                          href="/profile"
+                          className="inline-flex items-center justify-center h-8 rounded-md px-3 text-xs font-medium border border-slate-300 bg-white hover:bg-slate-50 text-slate-900"
+                        >
+                          Complete contact profile
+                        </Link>
+                      )}
+                      <Link
+                        href="/profile/documents"
+                        className="inline-flex items-center justify-center h-8 rounded-md px-3 text-xs font-medium border border-slate-300 bg-white hover:bg-slate-50 text-slate-900"
+                      >
+                        Manage document vault
+                      </Link>
+                    </div>
+                  </div>
+
+                  {app.deadline_date && (
+                    <p className="text-sm text-slate-500">Deadline: {formatDate(app.deadline_date)}</p>
+                  )}
+
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-slate-700">Document checklist</p>
+                    {app.checklist.map((item) => (
+                      <div key={item.id} className="rounded-lg border border-slate-100 p-3 space-y-2">
+                        <div className="flex items-start gap-2">
+                          {item.doc_type ? (
+                            <span className="mt-0.5 h-4 w-4 rounded-full bg-green-100 border border-green-300 shrink-0" />
+                          ) : (
+                            <input
+                              type="checkbox"
+                              checked={item.is_completed}
+                              onChange={() => toggleChecklist(app.id, item.id, item.is_completed)}
+                              className="mt-0.5"
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-medium ${item.is_required && !item.is_completed ? "text-red-800" : "text-slate-700"}`}>
+                              {item.title}
+                              {item.doc_type && (
+                                <span className="ml-2 text-xs font-normal text-slate-500">
+                                  ({DOCUMENT_TYPE_LABELS[item.doc_type]})
+                                </span>
+                              )}
+                            </p>
+                            {item.description && (
+                              <p className="text-xs text-slate-500 mt-0.5">{item.description}</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {item.doc_type && (
+                          <div className="pl-6 space-y-1">
+                            <label className="text-xs text-slate-500">Link from vault</label>
+                            <Select
+                              value={item.linked_document_id || ""}
+                              onChange={(e) => linkDocument(app.id, item.id, e.target.value)}
+                              className="text-sm"
+                            >
+                              <option value="">— Select document —</option>
+                              {documentsForItem(item).map((doc) => (
+                                <option key={doc.id} value={doc.id}>
+                                  {doc.display_name}
+                                </option>
+                              ))}
+                            </Select>
+                            {documentsForItem(item).length === 0 && (
+                              <p className="text-xs text-slate-500">
+                                No matching documents.{" "}
+                                <Link href="/profile/documents" className="text-red-700 underline">
+                                  Upload to vault
+                                </Link>
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
     </div>

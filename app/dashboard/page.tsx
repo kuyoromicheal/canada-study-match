@@ -1,7 +1,9 @@
 import { getSessionUserId } from "@/lib/auth/session";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { getProgramMatches, getStudentProfile, getUpcomingDeadlines } from "@/lib/data/repository";
 import { getCatalogStatus } from "@/lib/data/catalog-status";
+import { isSupabaseConfigured } from "@/lib/supabase/client";
 import { CatalogNotice } from "@/components/catalog/catalog-notice";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,11 +15,19 @@ import { AlertTriangle, Calendar, Target, User } from "lucide-react";
 import { SUPERVISOR_STATUS_LABELS } from "@/types/database";
 
 export default async function DashboardPage() {
-  const [profile, catalogStatus, deadlines, userId] = await Promise.all([
-    getStudentProfile(),
+  if (!isSupabaseConfigured()) {
+    redirect("/login");
+  }
+
+  const userId = await getSessionUserId();
+  if (!userId) {
+    redirect("/login?redirect=/dashboard");
+  }
+
+  const [profile, catalogStatus, deadlines] = await Promise.all([
+    getStudentProfile(userId),
     getCatalogStatus(),
     getUpcomingDeadlines(5),
-    getSessionUserId(),
   ]);
   const matches = profile ? await getProgramMatches(profile) : [];
   const topMatches = matches.filter((m) => m.matchResult).slice(0, 3);
@@ -37,15 +47,11 @@ export default async function DashboardPage() {
 
       <CatalogNotice status={catalogStatus} />
 
-      {!profile && !userId && (
-        <Alert variant="info" title="Sign in to get personalized matches">
-          <Link href="/login" className="text-red-700 underline">Sign in</Link> to save your profile and see match scores.
-        </Alert>
-      )}
-
-      {!profile && userId && (
+      {!profile && (
         <Alert variant="info" title="Complete your profile">
-          <Link href="/onboarding" className="text-red-700 underline">Finish onboarding</Link>{" "}
+          <Link href="/profile" className="text-red-700 underline">Set up your profile</Link>{" "}
+          or{" "}
+          <Link href="/onboarding" className="text-red-700 underline">run the onboarding wizard</Link>{" "}
           to get personalized match scores.
         </Alert>
       )}

@@ -86,9 +86,18 @@ export function ProgramCard({
           {tuition && (
             <p>Tuition: {formatCurrency(tuition.amount)}/year (intl.)</p>
           )}
-          {program.application_fee != null && (
+          {program.application_fee != null && program.application_fee > 0 ? (
             <p>Application fee: {formatCurrency(program.application_fee)}</p>
+          ) : (
+            <p>Application fee: Free</p>
           )}
+          {program.fee_waiver_available && (
+            <p className="text-green-700 font-medium">
+              Fee waiver may be available
+              {program.fee_waiver_notes ? ` — ${program.fee_waiver_notes}` : ""}
+            </p>
+          )}
+          <p className="text-xs text-slate-400">Fees are charged by the school&apos;s portal — this app does not process payments.</p>
           {nextDeadline && (
             <p>Next deadline: {formatDate(nextDeadline.deadline_date)} ({nextDeadline.intake})</p>
           )}

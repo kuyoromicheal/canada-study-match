@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
 
-export type CatalogMode = "seed" | "mixed" | "live";
+export type CatalogMode = "seed" | "empty" | "mixed" | "live";
 
 export interface CatalogStatus {
   mode: CatalogMode;
@@ -57,7 +57,7 @@ export async function getCatalogStatus(): Promise<CatalogStatus> {
 
   if (realPrograms === 0) {
     return {
-      mode: "seed",
+      mode: "empty",
       supabaseConfigured: true,
       realSchoolCount: realSchoolCount ?? 0,
       realProgramCount: 0,
@@ -77,5 +77,5 @@ export async function getCatalogStatus(): Promise<CatalogStatus> {
 }
 
 export function catalogUsesSeedFallback(status: CatalogStatus): boolean {
-  return status.mode === "seed";
+  return status.mode === "seed" && !status.supabaseConfigured;
 }

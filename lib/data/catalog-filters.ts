@@ -11,14 +11,18 @@ async function getProgramRowsForFilters() {
         .select("province, field, city, intakes")
         .eq("is_demo_record", false);
       if (data?.length) return data;
+      return [];
     }
   }
-  return getSeedPrograms().map((p) => ({
+  if (!isSupabaseConfigured()) {
+    return getSeedPrograms().map((p) => ({
     province: p.province,
     field: p.field,
     city: p.city,
     intakes: p.intakes,
   }));
+  }
+  return [];
 }
 
 export async function getProvinces(): Promise<string[]> {

@@ -4,6 +4,7 @@ import {
   getDefaultChecklistItems,
   scoreSupervisorCompatibility,
 } from "@/lib/matching/supervisor-detection";
+import { buildChecklistFromProgram } from "@/lib/applications/checklist-from-program";
 import { getSessionUserId } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/client";
@@ -25,6 +26,7 @@ import type {
   Program,
   ProgramFilters,
   ProgramRequirement,
+  ProgramRequiredDocument,
   ProgramWithDetails,
   SavedProgram,
   School,
@@ -65,12 +67,14 @@ async function enrichProgramFromSupabase(
   const [
     { data: school },
     { data: requirements },
+    { data: requiredDocuments },
     { data: deadlines },
     { data: tuition },
     { data: psLinks },
   ] = await Promise.all([
     supabase.from("schools").select("*").eq("id", program.school_id).maybeSingle(),
     supabase.from("program_requirements").select("*").eq("program_id", program.id),
+    supabase.from("program_required_documents").select("*").eq("program_id", program.id).order("sort_order"),
     supabase.from("application_deadlines").select("*").eq("program_id", program.id),
     supabase.from("tuition").select("*").eq("program_id", program.id),
     supabase.from("program_supervisors").select("*").eq("program_id", program.id),
@@ -92,6 +96,7 @@ async function enrichProgramFromSupabase(
     ...program,
     school: (school as School) || undefined,
     requirements: (requirements as ProgramRequirement[]) || [],
+    required_documents: (requiredDocuments as ProgramRequiredDocument[]) || [],
     deadlines: (deadlines as ApplicationDeadline[]) || [],
     tuition: (tuition as Tuition[]) || [],
     supervisors,
@@ -114,6 +119,15 @@ function filterEnrichedPrograms(
     if (filters.internationalEligible !== undefined && p.international_eligible !== filters.internationalEligible) return false;
     if (filters.intake && !p.intakes?.some((i) => i.toLowerCase().includes(filters.intake!.toLowerCase()))) return false;
     if (filters.maxFee && p.application_fee && p.application_fee > filters.maxFee) return false;
+    if (filters.institutionType && p.school?.institution_type !== filters.institutionType) return false;
+    if (filters.feeFilter === "free") {
+      const fee = p.application_fee ?? 0;
+      if (fee > 0 && !p.fee_waiver_available) return false;
+    }
+    if (filters.feeFilter === "paid") {
+      const fee = p.application_fee ?? 0;
+      if (fee === 0 && !p.fee_waiver_available) return false;
+    }
     if (filters.search) {
       const q = filters.search.toLowerCase();
       const haystack = `${p.name} ${p.field} ${p.school?.name || ""} ${p.city}`.toLowerCase();
@@ -238,11 +252,6 @@ export async function getStudentProfile(explicitUserId?: string): Promise<Studen
       if (data) return data as StudentProfile;
       return null;
     }
-  }
-
-  if (useSeedFallback()) {
-    const { getDemoProfile } = await import("@/lib/matching/engine");
-    return getDemoProfile();
   }
 
   return null;
@@ -492,7 +501,7 @@ export async function createApplicationForUser(
     .eq("application_id", app.id);
 
   if (!count) {
-    const items = getDefaultChecklistItems(program, supervisorInfo.classification);
+    const items = buildChecklistFromProgram(program, supervisorInfo.classification);
     await supabase.from("application_checklist_items").insert(
       items.map((item) => ({
         application_id: app.id,
@@ -501,6 +510,9 @@ export async function createApplicationForUser(
         description: item.description,
         is_required: item.is_required,
         sort_order: item.sort_order,
+        doc_type: item.doc_type,
+        required_document_id: item.required_document_id,
+        is_completed: false,
       }))
     );
   }
@@ -530,20 +542,59 @@ export async function updateApplicationStatus(
 export async function updateChecklistItem(
   userId: string,
   itemId: string,
-  isCompleted: boolean
+  updates: { is_completed?: boolean; linked_document_id?: string | null }
 ): Promise<boolean> {
   if (useSeedFallback()) return false;
 
   const supabase = await createClient();
   if (!supabase) return false;
 
+  const payload: Record<string, unknown> = {};
+  if (typeof updates.is_completed === "boolean") payload.is_completed = updates.is_completed;
+  if (updates.linked_document_id !== undefined) {
+    payload.linked_document_id = updates.linked_document_id;
+    if (updates.linked_document_id) payload.is_completed = true;
+    else payload.is_completed = false;
+  }
+
   const { error } = await supabase
     .from("application_checklist_items")
-    .update({ is_completed: isCompleted })
+    .update(payload)
     .eq("id", itemId)
     .eq("user_id", userId);
 
   return !error;
+}
+
+export async function getApplicationForUser(userId: string, applicationId: string) {
+  if (useSeedFallback()) return null;
+
+  const supabase = await createClient();
+  if (!supabase) return null;
+
+  const { data: app } = await supabase
+    .from("application_tracker")
+    .select("*")
+    .eq("id", applicationId)
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (!app) return null;
+
+  const program = await getProgramById(app.program_id);
+  if (!program) return null;
+
+  const { data: checklist } = await supabase
+    .from("application_checklist_items")
+    .select("*")
+    .eq("application_id", app.id)
+    .order("sort_order");
+
+  return {
+    ...(app as ApplicationTracker),
+    program,
+    checklist: (checklist as ApplicationChecklistItem[]) || [],
+  };
 }
 
 export async function getRecordsNeedingVerification(): Promise<{

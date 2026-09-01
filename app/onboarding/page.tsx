@@ -21,6 +21,12 @@ const profileSchema = z.object({
   current_country: z.string().min(1, "Required"),
   age: z.string().optional(),
   email: z.string().email().optional().or(z.literal("")),
+  phone_number: z.string().optional(),
+  mailing_street: z.string().optional(),
+  mailing_city: z.string().optional(),
+  mailing_province_state: z.string().optional(),
+  mailing_postal_code: z.string().optional(),
+  mailing_country: z.string().optional(),
   highest_qualification: z.string().optional(),
   degree_name: z.string().optional(),
   university: z.string().optional(),
@@ -111,6 +117,12 @@ export default function OnboardingPage() {
             current_country: profile.current_country || "",
             age: profile.age?.toString() || "",
             email: profile.email || "",
+            phone_number: profile.phone_number || "",
+            mailing_street: profile.mailing_street || "",
+            mailing_city: profile.mailing_city || "",
+            mailing_province_state: profile.mailing_province_state || "",
+            mailing_postal_code: profile.mailing_postal_code || "",
+            mailing_country: profile.mailing_country || "",
             highest_qualification: profile.highest_qualification || "",
             degree_name: profile.degree_name || "",
             university: profile.university || "",
@@ -220,6 +232,19 @@ export default function OnboardingPage() {
                 <Field label="Citizenship country" id="citizenship_country" required {...register("citizenship_country")} />
                 <Field label="Current country" id="current_country" required {...register("current_country")} />
                 <Field label="Age" id="age" type="number" {...register("age")} />
+                <Field label="Phone number" id="phone_number" {...register("phone_number")} placeholder="+1 416 555 0100" />
+                <div className="pt-2 border-t border-slate-100 space-y-4">
+                  <p className="text-sm font-medium text-slate-700">Mailing address</p>
+                  <Field label="Street address" id="mailing_street" {...register("mailing_street")} />
+                  <div className="grid grid-cols-2 gap-4">
+                    <Field label="City" id="mailing_city" {...register("mailing_city")} />
+                    <Field label="Province / state" id="mailing_province_state" {...register("mailing_province_state")} />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <Field label="Postal / ZIP code" id="mailing_postal_code" {...register("mailing_postal_code")} />
+                    <Field label="Country" id="mailing_country" {...register("mailing_country")} />
+                  </div>
+                </div>
               </>
             )}
 

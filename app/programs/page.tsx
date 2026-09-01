@@ -28,6 +28,8 @@ export default async function ProgramsPage({
     internationalEligible: params.international === "true" ? true : undefined,
     minMatchScore: params.minScore ? Number(params.minScore) : undefined,
     search: params.q,
+    institutionType: params.institutionType as import("@/types/database").InstitutionType | undefined,
+    feeFilter: params.feeFilter as import("@/types/database").ApplicationFeeFilter | undefined,
     includeDemo: params.includeDemo === "true",
     includeUnverified: params.includeUnverified === "true",
   };

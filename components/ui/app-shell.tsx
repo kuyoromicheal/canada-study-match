@@ -25,7 +25,7 @@ const navItems = [
   { href: "/programs", label: "Programs", icon: Search },
   { href: "/supervisors", label: "Supervisors", icon: Users },
   { href: "/applications", label: "Applications", icon: ClipboardList },
-  { href: "/onboarding", label: "Profile", icon: BookOpen },
+  { href: "/profile", label: "Profile", icon: BookOpen },
   { href: "/admin", label: "Admin", icon: Settings },
 ];
 

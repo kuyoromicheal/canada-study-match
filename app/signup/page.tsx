@@ -25,13 +25,15 @@ export default function SignupPage() {
     setLoading(true);
 
     if (!isSupabaseConfigured()) {
-      router.push("/onboarding");
+      setError("Supabase is not configured on this deployment.");
+      setLoading(false);
       return;
     }
 
     const supabase = createClient();
     if (!supabase) {
-      router.push("/onboarding");
+      setError("Unable to connect to Supabase.");
+      setLoading(false);
       return;
     }
 
@@ -63,8 +65,8 @@ export default function SignupPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {!isSupabaseConfigured() && (
-            <Alert variant="info" title="Demo Mode">
-              Supabase not configured. Continue to explore with demo data.
+            <Alert variant="warning" title="Setup required">
+              Supabase environment variables are missing. Account creation requires a configured deployment.
             </Alert>
           )}
 

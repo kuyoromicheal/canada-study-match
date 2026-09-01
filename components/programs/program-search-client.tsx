@@ -80,14 +80,32 @@ export function ProgramSearchClient({
           <FilterSelect label="Field" value={filters.field} onChange={(v) => setFilters({ ...filters, field: v })} options={fields} />
           <FilterSelect label="Intake" value={filters.intake} onChange={(v) => setFilters({ ...filters, intake: v })} options={intakes} />
           <div className="space-y-2">
+            <Label>Institution type</Label>
+            <Select value={filters.institutionType || ""} onChange={(e) => setFilters({ ...filters, institutionType: e.target.value })}>
+              <option value="">Any</option>
+              <option value="university">University</option>
+              <option value="college">College</option>
+              <option value="polytechnic">Polytechnic</option>
+            </Select>
+          </div>
+          <div className="space-y-2">
             <Label>Degree level</Label>
             <Select value={filters.degree || ""} onChange={(e) => setFilters({ ...filters, degree: e.target.value })}>
               <option value="">Any</option>
               <option value="certificate">Certificate</option>
               <option value="diploma">Diploma</option>
-              <option value="bachelor">Bachelor</option>
-              <option value="master">Master</option>
+              <option value="bachelor">Bachelor&apos;s</option>
+              <option value="graduate_certificate">Graduate Certificate</option>
+              <option value="master">Master&apos;s</option>
               <option value="phd">PhD</option>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Application fee</Label>
+            <Select value={filters.feeFilter || ""} onChange={(e) => setFilters({ ...filters, feeFilter: e.target.value })}>
+              <option value="">Any</option>
+              <option value="free">Free (no fee or waiver available)</option>
+              <option value="paid">Paid</option>
             </Select>
           </div>
           <div className="space-y-2">

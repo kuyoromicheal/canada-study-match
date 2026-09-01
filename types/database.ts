@@ -21,9 +21,24 @@ export type DegreeLevel =
   | "certificate"
   | "diploma"
   | "bachelor"
+  | "graduate_certificate"
   | "master"
   | "phd"
   | "postdoc";
+
+export type DocumentType =
+  | "transcript"
+  | "certificate"
+  | "resume"
+  | "reference_letter"
+  | "english_test_report"
+  | "statement_of_purpose"
+  | "passport_copy"
+  | "other";
+
+export type InstitutionType = "university" | "college" | "polytechnic";
+
+export type ApplicationFeeFilter = "free" | "paid";
 
 export type ApplicationStatus =
   | "researching"
@@ -98,6 +113,12 @@ export interface StudentProfile {
   study_permit_required: boolean;
   prefer_international_friendly: boolean;
   prefer_pgwp_eligible: boolean;
+  phone_number: string | null;
+  mailing_street: string | null;
+  mailing_city: string | null;
+  mailing_province_state: string | null;
+  mailing_postal_code: string | null;
+  mailing_country: string | null;
   onboarding_completed: boolean;
   profile_completeness: number;
   created_at: string;
@@ -146,9 +167,37 @@ export interface Program extends VerifiableRecord {
   english_requirement: string | null;
   prerequisites: string[] | null;
   intakes: string[] | null;
+  official_admissions_url: string | null;
+  fee_waiver_available: boolean;
+  fee_waiver_notes: string | null;
   source_type?: SourceType | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface ProgramRequiredDocument {
+  id: string;
+  program_id: string;
+  doc_type: DocumentType;
+  title: string;
+  description: string | null;
+  is_required: boolean;
+  sort_order: number;
+  verification_status: VerificationStatus;
+  created_at: string;
+}
+
+export interface StudentDocument {
+  id: string;
+  user_id: string;
+  doc_type: DocumentType;
+  display_name: string;
+  file_name: string;
+  storage_path: string;
+  file_size: number;
+  mime_type: string;
+  uploaded_at: string;
+  created_at: string;
 }
 
 export interface ProgramRequest {
@@ -250,6 +299,9 @@ export interface ApplicationChecklistItem {
   is_required: boolean;
   due_date: string | null;
   sort_order: number;
+  linked_document_id: string | null;
+  required_document_id: string | null;
+  doc_type: DocumentType | null;
   created_at: string;
 }
 
@@ -317,6 +369,7 @@ export interface MatchResult {
 export interface ProgramWithDetails extends Program {
   school?: School;
   requirements?: ProgramRequirement[];
+  required_documents?: ProgramRequiredDocument[];
   deadlines?: ApplicationDeadline[];
   tuition?: Tuition[];
   supervisors?: (Supervisor & { is_primary?: boolean })[];
@@ -346,6 +399,8 @@ export interface ProgramFilters {
   search?: string;
   includeDemo?: boolean;
   includeUnverified?: boolean;
+  institutionType?: InstitutionType;
+  feeFilter?: ApplicationFeeFilter;
 }
 
 export const MATCH_TIER_LABELS: Record<MatchTier, string> = {
@@ -416,6 +471,12 @@ export const PROFILE_FIELDS_WEIGHT: Record<string, number> = {
   desired_field: 8,
   preferred_intake: 5,
   preferred_provinces: 5,
+  phone_number: 5,
+  mailing_street: 3,
+  mailing_city: 3,
+  mailing_province_state: 3,
+  mailing_postal_code: 3,
+  mailing_country: 3,
 };
 
 export function calculateProfileCompleteness(

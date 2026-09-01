@@ -134,7 +134,7 @@ export const DEMO_SCHOOLS: School[] = [
   },
 ];
 
-export const DEMO_PROGRAMS: Program[] = [
+const DEMO_PROGRAMS_BASE = [
   {
     id: "prog-demo-001",
     school_id: "school-demo-001",
@@ -484,6 +484,13 @@ export const DEMO_PROGRAMS: Program[] = [
     updated_at: "2025-01-01T00:00:00Z",
   },
 ];
+
+export const DEMO_PROGRAMS = DEMO_PROGRAMS_BASE.map((p) => ({
+  ...p,
+  official_admissions_url: null,
+  fee_waiver_available: false,
+  fee_waiver_notes: null,
+})) as Program[];
 
 export const DEMO_SUPERVISORS: Supervisor[] = [
   {

@@ -10,13 +10,21 @@ export async function PATCH(
   if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
-  const { item_id, is_completed } = await request.json();
+  const { item_id, is_completed, linked_document_id } = await request.json();
 
-  if (!item_id || typeof is_completed !== "boolean") {
-    return NextResponse.json({ error: "item_id and is_completed required" }, { status: 400 });
+  if (!item_id) {
+    return NextResponse.json({ error: "item_id required" }, { status: 400 });
   }
 
-  const ok = await updateChecklistItem(userId, item_id, is_completed);
+  const updates: { is_completed?: boolean; linked_document_id?: string | null } = {};
+  if (typeof is_completed === "boolean") updates.is_completed = is_completed;
+  if (linked_document_id !== undefined) updates.linked_document_id = linked_document_id;
+
+  if (Object.keys(updates).length === 0) {
+    return NextResponse.json({ error: "No updates provided" }, { status: 400 });
+  }
+
+  const ok = await updateChecklistItem(userId, item_id, updates);
   if (!ok) {
     return NextResponse.json({ error: "Failed to update checklist item" }, { status: 500 });
   }

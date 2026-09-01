@@ -11,9 +11,20 @@ export function CatalogNotice({
 }) {
   if (status.mode === "seed") {
     return (
-      <Alert variant="warning" title="Demo Mode" className={className}>
-        This app is using fictional DEMO data only. All universities, programs, and
-        supervisors are placeholders until real, sourced data is added and verified.
+      <Alert variant="warning" title="Supabase not configured" className={className}>
+        This deployment is missing Supabase environment variables. Add{" "}
+        <code className="text-xs">NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
+        <code className="text-xs">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> to enable live
+        data and accounts.
+      </Alert>
+    );
+  }
+
+  if (status.mode === "empty") {
+    return (
+      <Alert variant="info" title="Catalog loading" className={className}>
+        Your database is connected but no real programs are listed yet. Use the admin
+        panel to ingest institutions and programs.
       </Alert>
     );
   }
@@ -43,10 +54,14 @@ export function CatalogFooterText({ status }: { status: CatalogStatus }) {
   if (status.mode === "seed") {
     return (
       <>
-        DEMO DATA ONLY — All program information is fictional placeholder data.{" "}
+        Supabase not configured — set environment variables to enable live data.{" "}
         {MATCH_DISCLAIMER}
       </>
     );
+  }
+
+  if (status.mode === "empty") {
+    return <>Catalog connected — programs are being added. {MATCH_DISCLAIMER}</>;
   }
 
   if (status.mode === "mixed") {
@@ -64,8 +79,16 @@ export function CatalogFooterText({ status }: { status: CatalogStatus }) {
 export function CatalogHeroBadge({ status }: { status: CatalogStatus }) {
   if (status.mode === "seed") {
     return (
-      <span className="inline-flex items-center rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-800">
-        DEMO DATA — Not real university information
+      <span className="inline-flex items-center rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium text-yellow-800">
+        Setup required — connect Supabase
+      </span>
+    );
+  }
+
+  if (status.mode === "empty") {
+    return (
+      <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs font-medium text-blue-800">
+        Connected — catalog being populated
       </span>
     );
   }

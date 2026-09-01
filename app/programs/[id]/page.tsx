@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProgramById, getProgramMatches, getStudentProfile } from "@/lib/data/repository";
 import { analyzeProgramSupervisorRequirement, getDefaultChecklistItems } from "@/lib/matching/supervisor-detection";
+import { PreparationDisclaimer } from "@/components/applications/preparation-disclaimer";
 import { FieldVerificationBadge, ProgramLevelBadge } from "@/components/programs/field-verification-badge";
 import {
   getEnglishVerificationStatus,
@@ -15,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import { DOCUMENT_TYPE_LABELS } from "@/lib/documents/constants";
 import {
   MATCH_DISCLAIMER,
   SUPERVISOR_STATUS_LABELS,
@@ -41,7 +43,8 @@ export default async function ProgramDetailPage({
   const matches = profile ? await getProgramMatches(profile) : [];
   const matchResult = matches.find((m) => m.id === id)?.matchResult;
   const supervisorInfo = analyzeProgramSupervisorRequirement(program);
-  const checklist = getDefaultChecklistItems(program, supervisorInfo.classification);
+  const requiredDocuments = program.required_documents?.filter((d) => d.is_required) ?? [];
+  const admissionsUrl = program.official_admissions_url || program.source_url || null;
   const tuition = program.tuition?.find((t) => t.period === "year");
   const gpaStatus = getGpaVerificationStatus(program);
   const englishStatus = getEnglishVerificationStatus(program);
@@ -84,6 +87,8 @@ export default async function ProgramDetailPage({
       <Alert variant="warning" title="Not Guaranteed Admission">
         {MATCH_DISCLAIMER}
       </Alert>
+
+      <PreparationDisclaimer admissionsUrl={admissionsUrl} />
 
       <div className="grid lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
@@ -201,9 +206,20 @@ export default async function ProgramDetailPage({
               ) : (
                 <p className="text-slate-500">Tuition not listed.</p>
               )}
-              {program.application_fee != null && (
+              {program.application_fee != null && program.application_fee > 0 ? (
                 <InfoRow label="Application fee" value={formatCurrency(program.application_fee)} />
+              ) : (
+                <InfoRow label="Application fee" value="Free" />
               )}
+              {program.fee_waiver_available && (
+                <div className="text-sm text-green-800 bg-green-50 rounded-lg p-3 border border-green-100">
+                  <p className="font-medium">Fee waiver may be available</p>
+                  {program.fee_waiver_notes && <p className="mt-1">{program.fee_waiver_notes}</p>}
+                </div>
+              )}
+              <p className="text-xs text-slate-500 pt-1">
+                Fees are charged by the school&apos;s application portal. This app displays verified fee information only — no payments are processed here.
+              </p>
             </CardContent>
           </Card>
 
@@ -225,9 +241,27 @@ export default async function ProgramDetailPage({
           </Card>
 
           <Card>
-            <CardHeader><CardTitle>ACTION REQUIRED Checklist</CardTitle></CardHeader>
+            <CardHeader><CardTitle>Required application documents</CardTitle></CardHeader>
             <CardContent className="space-y-2">
-              {checklist.map((item) => (
+              {requiredDocuments.length ? requiredDocuments.map((doc) => (
+                <div key={doc.id} className="text-sm border border-slate-100 rounded-lg p-3">
+                  <p className="font-medium text-slate-800">{doc.title}</p>
+                  <p className="text-xs text-slate-500">{DOCUMENT_TYPE_LABELS[doc.doc_type]}</p>
+                  {doc.description && <p className="text-slate-600 mt-1">{doc.description}</p>}
+                </div>
+              )) : (
+                <p className="text-sm text-slate-500">Document requirements not yet catalogued for this program.</p>
+              )}
+              <p className="text-xs text-slate-500 pt-2">
+                Add this program to your tracker to build a checklist and link documents from your vault.
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle>Preparation checklist (reference)</CardTitle></CardHeader>
+            <CardContent className="space-y-2">
+              {getDefaultChecklistItems(program, supervisorInfo.classification).map((item) => (
                 <div key={item.title} className="flex gap-2 text-sm">
                   <input type="checkbox" className="mt-0.5" disabled />
                   <div>
@@ -239,18 +273,30 @@ export default async function ProgramDetailPage({
             </CardContent>
           </Card>
 
-          {program.source_url && (
+          {(program.official_admissions_url || program.source_url) && (
             <Card>
-              <CardHeader><CardTitle>Official Sources</CardTitle></CardHeader>
-              <CardContent>
-                <a
-                  href={program.source_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-sm text-red-700 hover:underline"
-                >
-                  View source <ExternalLink className="h-3.5 w-3.5" />
-                </a>
+              <CardHeader><CardTitle>Official sources</CardTitle></CardHeader>
+              <CardContent className="space-y-2">
+                {program.official_admissions_url && (
+                  <a
+                    href={program.official_admissions_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm text-red-700 hover:underline font-medium"
+                  >
+                    Official admissions portal <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                )}
+                {program.source_url && program.source_url !== program.official_admissions_url && (
+                  <a
+                    href={program.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 text-sm text-red-700 hover:underline"
+                  >
+                    Program source page <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                )}
               </CardContent>
             </Card>
           )}
