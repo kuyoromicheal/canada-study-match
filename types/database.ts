@@ -38,6 +38,24 @@ export type DocumentType =
 
 export type InstitutionType = "university" | "college" | "polytechnic";
 
+export const CANADIAN_PROVINCES = [
+  "Alberta",
+  "British Columbia",
+  "Manitoba",
+  "New Brunswick",
+  "Newfoundland and Labrador",
+  "Northwest Territories",
+  "Nova Scotia",
+  "Nunavut",
+  "Ontario",
+  "Prince Edward Island",
+  "Quebec",
+  "Saskatchewan",
+  "Yukon",
+] as const;
+
+export type CanadianProvince = (typeof CANADIAN_PROVINCES)[number];
+
 export type ApplicationFeeFilter = "free" | "paid";
 
 export type ApplicationStatus =
@@ -100,6 +118,8 @@ export interface StudentProfile {
   english_instruction_language: boolean;
   desired_qualification: string | null;
   desired_field: string | null;
+  field_category: string | null;
+  preferred_institution_type: InstitutionType | null;
   desired_program_type: ProgramType | null;
   preferred_intake: string | null;
   preferred_provinces: string[] | null;
@@ -121,6 +141,16 @@ export interface StudentProfile {
   mailing_country: string | null;
   onboarding_completed: boolean;
   profile_completeness: number;
+  age_range?: string | null;
+  qualifications?: Record<string, unknown>[] | null;
+  secondary_interests?: string[] | null;
+  research_keywords?: string[] | null;
+  skills?: string[] | null;
+  work_history?: Record<string, unknown>[] | null;
+  preferred_study_levels?: string[] | null;
+  preferred_program_types?: string[] | null;
+  max_first_year_cost?: number | null;
+  show_next_available_intake?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -171,6 +201,16 @@ export interface Program extends VerifiableRecord {
   fee_waiver_available: boolean;
   fee_waiver_notes: string | null;
   source_type?: SourceType | null;
+  campus?: string | null;
+  delivery_mode?: string | null;
+  study_mode?: string | null;
+  application_opens?: string | null;
+  funding_notes?: string | null;
+  dli_number?: string | null;
+  study_permit_info_url?: string | null;
+  pgwp_info_url?: string | null;
+  international_student_notes?: string | null;
+  program_structure_notes?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -469,6 +509,7 @@ export const PROFILE_FIELDS_WEIGHT: Record<string, number> = {
   language_test_score: 8,
   desired_qualification: 8,
   desired_field: 8,
+  field_category: 8,
   preferred_intake: 5,
   preferred_provinces: 5,
   phone_number: 5,

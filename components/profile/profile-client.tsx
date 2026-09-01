@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -10,24 +10,40 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert } from "@/components/ui/alert";
 import { Progress } from "@/components/ui/progress";
 import { isContactProfileComplete } from "@/lib/validation/contact";
-import { countryOptions } from "@/lib/onboarding/options";
-import { SelectField } from "@/components/onboarding/select-field";
+import {
+  getCountryOptions,
+  resolveCountryCode,
+} from "@/lib/constants/form-options";
+import { SearchableCombobox } from "@/components/ui/searchable-combobox";
+import {
+  formatPhoneWithCountryCode,
+  parsePhoneNumber,
+  PhoneInput,
+} from "@/components/forms/phone-input";
 import type { StudentProfile, StudentProfileInput } from "@/types/database";
 import { calculateProfileCompleteness } from "@/types/database";
 
 export function ProfileClient({ initialProfile }: { initialProfile: StudentProfile | null }) {
   const router = useRouter();
-  const [profile, setProfile] = useState<Partial<StudentProfileInput>>({
+  const countryOptions = useMemo(() => getCountryOptions(), []);
+  const initialPhone = parsePhoneNumber(initialProfile?.phone_number);
+
+  const [profile, setProfile] = useState<Partial<StudentProfileInput> & {
+    phone_country_code?: string;
+    phone_local?: string;
+  }>({
     full_name: initialProfile?.full_name || "",
     email: initialProfile?.email || "",
-    citizenship_country: initialProfile?.citizenship_country || "",
-    current_country: initialProfile?.current_country || "",
+    citizenship_country: resolveCountryCode(initialProfile?.citizenship_country),
+    current_country: resolveCountryCode(initialProfile?.current_country),
+    phone_country_code: initialPhone.countryCode || resolveCountryCode(initialProfile?.citizenship_country),
+    phone_local: initialPhone.localNumber,
     phone_number: initialProfile?.phone_number || "",
     mailing_street: initialProfile?.mailing_street || "",
     mailing_city: initialProfile?.mailing_city || "",
     mailing_province_state: initialProfile?.mailing_province_state || "",
     mailing_postal_code: initialProfile?.mailing_postal_code || "",
-    mailing_country: initialProfile?.mailing_country || "",
+    mailing_country: resolveCountryCode(initialProfile?.mailing_country),
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,10 +58,20 @@ export function ProfileClient({ initialProfile }: { initialProfile: StudentProfi
     setError(null);
     setSaved(false);
 
+    const payload = {
+      ...profile,
+      phone_number: formatPhoneWithCountryCode(
+        profile.phone_country_code || profile.citizenship_country || "",
+        profile.phone_local || ""
+      ),
+    };
+    delete (payload as { phone_country_code?: string }).phone_country_code;
+    delete (payload as { phone_local?: string }).phone_local;
+
     const res = await fetch("/api/profile", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(profile),
+      body: JSON.stringify(payload),
     });
     const data = await res.json();
     setSaving(false);
@@ -75,17 +101,11 @@ export function ProfileClient({ initialProfile }: { initialProfile: StudentProfi
       </div>
 
       <div className="flex gap-2 text-sm">
-        <Link href="/profile" className="font-medium text-red-700 underline">
-          Contact & basics
-        </Link>
+        <Link href="/profile" className="font-medium text-red-700 underline">Contact & basics</Link>
         <span className="text-slate-300">|</span>
-        <Link href="/profile/documents" className="text-slate-600 hover:text-red-700">
-          Document vault
-        </Link>
+        <Link href="/profile/documents" className="text-slate-600 hover:text-red-700">Document vault</Link>
         <span className="text-slate-300">|</span>
-        <Link href="/onboarding" className="text-slate-600 hover:text-red-700">
-          Full onboarding wizard
-        </Link>
+        <Link href="/onboarding" className="text-slate-600 hover:text-red-700">Full onboarding wizard</Link>
       </div>
 
       <Card>
@@ -113,22 +133,26 @@ export function ProfileClient({ initialProfile }: { initialProfile: StudentProfi
 
             <Field label="Full name" value={profile.full_name || ""} onChange={(v) => updateField("full_name", v)} required />
             <Field label="Email" type="email" value={profile.email || ""} onChange={(v) => updateField("email", v)} />
-            <Field label="Phone number" value={profile.phone_number || ""} onChange={(v) => updateField("phone_number", v)} placeholder="+1 416 555 0100" />
-            <SelectField
-              label="Citizenship country"
+            <SearchableCombobox
               id="citizenship_country"
+              label="Citizenship country"
               required
               value={profile.citizenship_country || ""}
               onChange={(v) => updateField("citizenship_country", v)}
-              options={countryOptions()}
-              hint="Country on your passport"
+              options={countryOptions}
             />
-            <SelectField
-              label="Current country"
+            <SearchableCombobox
               id="current_country"
+              label="Current country"
               value={profile.current_country || ""}
               onChange={(v) => updateField("current_country", v)}
-              options={countryOptions()}
+              options={countryOptions}
+            />
+            <PhoneInput
+              countryCode={profile.phone_country_code || profile.citizenship_country || ""}
+              phoneNumber={profile.phone_local || ""}
+              onCountryCodeChange={(v) => setProfile((p) => ({ ...p, phone_country_code: v }))}
+              onPhoneNumberChange={(v) => setProfile((p) => ({ ...p, phone_local: v }))}
             />
 
             <div className="pt-2 border-t border-slate-100">
@@ -141,20 +165,18 @@ export function ProfileClient({ initialProfile }: { initialProfile: StudentProfi
                 </div>
                 <div className="grid sm:grid-cols-2 gap-4">
                   <Field label="Postal / ZIP code" value={profile.mailing_postal_code || ""} onChange={(v) => updateField("mailing_postal_code", v)} />
-                  <SelectField
-                    label="Country"
+                  <SearchableCombobox
                     id="mailing_country"
+                    label="Country"
                     value={profile.mailing_country || ""}
                     onChange={(v) => updateField("mailing_country", v)}
-                    options={countryOptions()}
+                    options={countryOptions}
                   />
                 </div>
               </div>
             </div>
 
-            <Button type="submit" disabled={saving}>
-              {saving ? "Saving..." : "Save profile"}
-            </Button>
+            <Button type="submit" disabled={saving}>{saving ? "Saving..." : "Save profile"}</Button>
           </form>
         </CardContent>
       </Card>
@@ -163,27 +185,14 @@ export function ProfileClient({ initialProfile }: { initialProfile: StudentProfi
 }
 
 function Field({
-  label,
-  value,
-  onChange,
-  type = "text",
-  required,
-  placeholder,
+  label, value, onChange, type = "text", required, placeholder,
 }: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  type?: string;
-  required?: boolean;
-  placeholder?: string;
+  label: string; value: string; onChange: (v: string) => void; type?: string; required?: boolean; placeholder?: string;
 }) {
   const id = label.toLowerCase().replace(/\s+/g, "-");
   return (
     <div className="space-y-2">
-      <Label htmlFor={id}>
-        {label}
-        {required ? " *" : ""}
-      </Label>
+      <Label htmlFor={id}>{label}{required ? " *" : ""}</Label>
       <Input id={id} type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} required={required} />
     </div>
   );

@@ -604,6 +604,8 @@ export function getDemoProfile(): StudentProfile {
     english_instruction_language: true,
     desired_qualification: "Master's",
     desired_field: "Computer Science",
+    field_category: "computer_information_sciences",
+    preferred_institution_type: "university",
     desired_program_type: "thesis",
     preferred_intake: "Fall 2026",
     preferred_provinces: ["Ontario", "British Columbia"],

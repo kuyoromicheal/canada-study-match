@@ -11,7 +11,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Alert } from "@/components/ui/alert";
 import { Tabs } from "@/components/ui/tabs";
 import { VERIFIABLE_FIELD_OPTIONS, type VerifiableFieldId } from "@/lib/verification/field-status";
-import { VERIFICATION_STATUS_LABELS } from "@/types/database";
+import {
+  DEGREE_LEVEL_OPTIONS,
+  INSTITUTION_TYPE_OPTIONS,
+  PROGRAM_TYPE_OPTIONS,
+} from "@/lib/constants/form-options";
+import { VERIFICATION_STATUS_LABELS, CANADIAN_PROVINCES } from "@/types/database";
 import { ExternalLink, Plus, Sparkles, CheckCircle } from "lucide-react";
 
 interface School {
@@ -117,7 +122,9 @@ export function AdminPanelClient() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    void load();
+  }, [load]);
 
   function toggleVerifiedField(
     field: VerifiableFieldId,
@@ -353,7 +360,12 @@ export function AdminPanelClient() {
                     <FormField label="Field *"><Input required value={programForm.field} onChange={(e) => setProgramForm({ ...programForm, field: e.target.value })} /></FormField>
                     <FormField label="Degree level *">
                       <Select value={programForm.degree_level} onChange={(e) => setProgramForm({ ...programForm, degree_level: e.target.value })}>
-                        {["certificate","diploma","bachelor","master","phd"].map((d) => <option key={d} value={d}>{d}</option>)}
+                        {DEGREE_LEVEL_OPTIONS.map((d) => <option key={d.value} value={d.value}>{d.label}</option>)}
+                      </Select>
+                    </FormField>
+                    <FormField label="Program type">
+                      <Select value={programForm.program_type} onChange={(e) => setProgramForm({ ...programForm, program_type: e.target.value })}>
+                        {PROGRAM_TYPE_OPTIONS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                       </Select>
                     </FormField>
                     <FormField label="Source URL *"><Input required value={programForm.source_url} onChange={(e) => setProgramForm({ ...programForm, source_url: e.target.value })} /></FormField>
@@ -388,14 +400,17 @@ export function AdminPanelClient() {
               <CardContent>
                 <form className="grid sm:grid-cols-2 gap-4" onSubmit={saveSchool}>
                   <FormField label="Name *"><Input required value={schoolForm.name} onChange={(e) => setSchoolForm({ ...schoolForm, name: e.target.value })} /></FormField>
-                  <FormField label="Province *"><Input required value={schoolForm.province} onChange={(e) => setSchoolForm({ ...schoolForm, province: e.target.value })} /></FormField>
+                  <FormField label="Province *">
+                    <Select required value={schoolForm.province} onChange={(e) => setSchoolForm({ ...schoolForm, province: e.target.value })}>
+                      <option value="">Select province...</option>
+                      {CANADIAN_PROVINCES.map((p) => <option key={p} value={p}>{p}</option>)}
+                    </Select>
+                  </FormField>
                   <FormField label="City *"><Input required value={schoolForm.city} onChange={(e) => setSchoolForm({ ...schoolForm, city: e.target.value })} /></FormField>
                   <FormField label="Website"><Input value={schoolForm.website_url} onChange={(e) => setSchoolForm({ ...schoolForm, website_url: e.target.value })} /></FormField>
                   <FormField label="Institution type">
                     <Select value={schoolForm.institution_type} onChange={(e) => setSchoolForm({ ...schoolForm, institution_type: e.target.value })}>
-                      <option value="university">University</option>
-                      <option value="college">College</option>
-                      <option value="polytechnic">Polytechnic</option>
+                      {INSTITUTION_TYPE_OPTIONS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </Select>
                   </FormField>
                   <FormField label="Source URL *"><Input required value={schoolForm.source_url} onChange={(e) => setSchoolForm({ ...schoolForm, source_url: e.target.value })} /></FormField>
